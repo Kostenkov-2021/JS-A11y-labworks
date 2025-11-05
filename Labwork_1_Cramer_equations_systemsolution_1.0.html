@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Решение системы уравнений методом Крамера</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h4 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .equation {
+            margin: 20px 0;
+            font-size: 18px;
+            text-align: center;
+        }
+        .input-group {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        .input-group label {
+            margin: 0 5px;
+        }
+        input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+        button {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .result input {
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h4>kostenkovd_2025</h4>
+        
+        <div class="equation">
+            Система уравнений:
+            <br>
+            a₁x + b₁y = c₁
+            <br>
+            a₂x + b₂y = c₂
+        </div>
+        
+        <div class="input-group">
+            <label>a₁:</label>
+            <input type="number" id="n1" value="2">
+            <label>b₁:</label>
+            <input type="number" id="n2" value="3">
+            <label>c₁:</label>
+            <input type="number" id="n3" value="8">
+        </div>
+        
+        <div class="input-group">
+            <label>a₂:</label>
+            <input type="number" id="n4" value="1">
+            <label>b₂:</label>
+            <input type="number" id="n5" value="-2">
+            <label>c₂:</label>
+            <input type="number" id="n6" value="-3">
+        </div>
+        
+        <button id="bt">Решить систему</button>
+        
+        <div class="result">
+            <label>x = </label>
+            <input type="text" id="result1" readonly>
+            <label>y = </label>
+            <input type="text" id="result2" readonly>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('bt').addEventListener('click', function() {
+            // Получаем значения коэффициентов
+            const a1 = parseFloat(document.getElementById('n1').value);
+            const b1 = parseFloat(document.getElementById('n2').value);
+            const c1 = parseFloat(document.getElementById('n3').value);
+            const a2 = parseFloat(document.getElementById('n4').value);
+            const b2 = parseFloat(document.getElementById('n5').value);
+            const c2 = parseFloat(document.getElementById('n6').value);
+            
+            // Вычисляем определители по методу Крамера
+            const D = a1 * b2 - a2 * b1;
+            const Dx = c1 * b2 - c2 * b1;
+            const Dy = a1 * c2 - a2 * c1;
+            
+            // Получаем элементы для вывода результатов
+            const result1 = document.getElementById('result1');
+            const result2 = document.getElementById('result2');
+            
+            // Проверяем, что определитель не равен нулю
+            if (D !== 0) {
+                const x = Dx / D;
+                const y = Dy / D;
+                result1.value = x.toFixed(2);
+                result2.value = y.toFixed(2);
+            } else {
+                result1.value = "Нет решения";
+                result2.value = "Нет решения";
+            }
+        });
+    </script>
+</body>
+</html>
