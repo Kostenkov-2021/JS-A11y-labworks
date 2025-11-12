@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лабораторная 3</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h4 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <script>
+(function() {
+    const href = window.location.href;
+    const n = parseInt(href.split('?')[1]);
+    
+    if (isNaN(n) || n < 2) {
+        document.title = '0';
+        return;
+    }
+    
+    const isPrime = num => {
+        for (let i = 2; i <= Math.sqrt(num); i++) {
+            if (num % i === 0) return false;
+        }
+        return num > 1;
+    };
+    
+    let count = 0;
+    for (let i = 2; i <= n; i++) {
+        if (isPrime(i)) count++;
+    }
+    
+    document.title = count;
+    
+    const h4 = document.createElement('h4');
+    h4.textContent = 'kostenkovd_2025';
+    document.body.appendChild(h4);
+})();
+    </script>
+</body>
+</html>
