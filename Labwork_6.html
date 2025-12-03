@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управляемое создание Div</title>
+</head>
+<body>
+    <h4>kostenkovd_2025</h4>
+    <button id="bt">Создать элементы</button>
+    <article></article>
+    
+    <script>
+        document.getElementById('bt').addEventListener('click', function() {
+            const article = document.querySelector('article');
+            
+            for (let i = 0; i < 1000; i++) {
+                const div = document.createElement('div');
+                div.id = 'i' + i;
+                article.appendChild(div);
+            }
+        });
+    </script>
+</body>
+</html>
