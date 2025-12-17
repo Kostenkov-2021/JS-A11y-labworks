@@ -5,9 +5,5 @@ This repository contains the tasks for JS Itmo course
 [Labwork 3](Labwork_3_parse_URL.html)
 [Labwork 5](Labwork_54789843789845821044392.html)
 [Labwork 6](Labwork_6.html)
-
-
-
-
-
+[Phuket time](Phuket_time_display.html)
 

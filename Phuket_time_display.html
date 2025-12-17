@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Текущее время в Пхукете</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .time-display {
+            font-size: 3em;
+            font-weight: bold;
+            color: #e74c3c;
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .details {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .loading {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        .error {
+            color: #c0392b;
+            padding: 15px;
+            background-color: #fadbd8;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .success {
+            color: #27ae60;
+            padding: 10px;
+            background-color: #d5f4e6;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        
+        .auto-update {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .timezone-info {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .flag {
+            font-size: 1.5em;
+        }
+        
+        .api-selector {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+        }
+        
+        .api-selector label {
+            margin-right: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><span class="flag">🇹🇭</span> Текущее время в Пхукете</h1>
+        
+        <div class="api-selector">
+            <label>
+                <input type="radio" name="api" value="worldtime" checked onchange="changeAPI()"> WorldTimeAPI
+            </label>
+            <label>
+                <input type="radio" name="api" value="timeapi" onchange="changeAPI()"> TimeAPI.io
+            </label>
+            <label>
+                <input type="radio" name="api" value="proxy" onchange="changeAPI()"> CORS-прокси
+            </label>
+        </div>
+        
+        <div class="time-display" id="currentTime">
+            <span class="loading">Загрузка времени...</span>
+        </div>
+        
+        <div id="apiStatus" class="success" style="display: none;">
+            Используется API: <span id="currentAPI">WorldTimeAPI</span>
+        </div>
+        
+        <div>
+            <button onclick="fetchTime()">Обновить время</button>
+            <button onclick="toggleAutoUpdate()" id="autoUpdateBtn">Включить автообновление</button>
+        </div>
+        
+        <div class="auto-update">
+            <input type="checkbox" id="autoUpdateCheckbox" onchange="toggleAutoUpdate()">
+            <label for="autoUpdateCheckbox">Автоматически обновлять каждые 10 секунд</label>
+        </div>
+        
+        <div class="details" id="timeDetails">
+            <div class="detail-row">
+                <span>Часовой пояс:</span>
+                <span class="timezone-info" id="timezone">Загрузка...</span>
+            </div>
+            <div class="detail-row">
+                <span>Дата:</span>
+                <span id="date">Загрузка...</span>
+            </div>
+            <div class="detail-row">
+                <span>День недели:</span>
+                <span id="day">Загрузка...</span>
+            </div>
+            <div class="detail-row">
+                <span>Время по UTC:</span>
+                <span id="utc">Загрузка...</span>
+            </div>
+        </div>
+        
+        <div id="errorMessage" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Настройки API
+        const API_CONFIG = {
+            worldtime: {
+                name: "WorldTimeAPI",
+                url: 'https://worldtimeapi.org/api/timezone/Asia/Bangkok',
+                direct: true
+            },
+            timeapi: {
+                name: "TimeAPI.io",
+                url: 'https://timeapi.io/api/Time/current/zone?timeZone=Asia/Bangkok',
+                direct: true
+            },
+            proxy: {
+                name: "CORS-прокси",
+                // Используем CORS-прокси для доступа к любому API
+                url: 'https://api.allorigins.win/raw?url=',
+                target: 'http://worldtimeapi.org/api/timezone/Asia/Bangkok',
+                direct: false
+            }
+        };
+        
+        let currentAPI = 'worldtime';
+        let autoUpdateInterval = null;
+        let isAutoUpdating = false;
+        
+        // Функция для получения времени с выбранного API
+        async function fetchTime() {
+            const timeDisplay = document.getElementById('currentTime');
+            const errorMessage = document.getElementById('errorMessage');
+            const apiStatus = document.getElementById('apiStatus');
+            const currentAPISpan = document.getElementById('currentAPI');
+            
+            // Показываем состояние загрузки
+            timeDisplay.innerHTML = '<span class="loading">Загрузка времени...</span>';
+            errorMessage.style.display = 'none';
+            apiStatus.style.display = 'none';
+            
+            const config = API_CONFIG[currentAPI];
+            currentAPISpan.textContent = config.name;
+            
+            try {
+                let apiUrl = config.url;
+                
+                // Если используем прокси, добавляем целевой URL
+                if (!config.direct && config.target) {
+                    apiUrl = config.url + encodeURIComponent(config.target);
+                }
+                
+                console.log(`Запрос к API: ${apiUrl}`);
+                
+                // Делаем запрос с таймаутом
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch(apiUrl, {
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`Ошибка HTTP: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Обрабатываем данные в зависимости от API
+                let datetime, timezone, utcTime;
+                
+                if (currentAPI === 'worldtime' || currentAPI === 'proxy') {
+                    // Формат WorldTimeAPI
+                    datetime = new Date(data.datetime);
+                    timezone = data.timezone || 'Asia/Bangkok';
+                    utcTime = data.utc_datetime;
+                } else if (currentAPI === 'timeapi') {
+                    // Формат TimeAPI.io
+                    datetime = new Date(data.dateTime);
+                    timezone = data.timeZone || 'Asia/Bangkok';
+                    // Преобразуем в UTC время
+                    utcTime = datetime.toISOString();
+                }
+                
+                // Форматируем время для отображения
+                const formattedTime = datetime.toLocaleTimeString('ru-RU', {
+                    timeZone: 'Asia/Bangkok',
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                const formattedDate = datetime.toLocaleDateString('ru-RU', {
+                    timeZone: 'Asia/Bangkok',
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                
+                const dayNames = [
+                    'Воскресенье', 'Понедельник', 'Вторник', 'Среда', 
+                    'Четверг', 'Пятница', 'Суббота'
+                ];
+                
+                const dayName = dayNames[datetime.getDay()];
+                
+                // Форматируем UTC время
+                const utcDate = new Date(utcTime);
+                const formattedUTC = utcDate.toLocaleTimeString('ru-RU', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                }) + ' UTC';
+                
+                // Обновляем DOM
+                timeDisplay.textContent = formattedTime;
+                document.getElementById('timezone').textContent = timezone;
+                document.getElementById('date').textContent = formattedDate;
+                document.getElementById('day').textContent = dayName;
+                document.getElementById('utc').textContent = formattedUTC;
+                
+                // Показываем успешное получение времени
+                apiStatus.style.display = 'block';
+                console.log(`Время обновлено через ${config.name}: ${formattedTime}`);
+                
+            } catch (error) {
+                console.error('Ошибка при получении времени:', error);
+                
+                // Пробуем использовать запасной API
+                if (currentAPI !== 'proxy') {
+                    console.log('Пробуем использовать другой API...');
+                    if (currentAPI === 'worldtime') {
+                        currentAPI = 'timeapi';
+                    } else if (currentAPI === 'timeapi') {
+                        currentAPI = 'proxy';
+                    }
+                    
+                    // Обновляем радио-кнопку
+                    document.querySelector(`input[name="api"][value="${currentAPI}"]`).checked = true;
+                    
+                    // Показываем сообщение о переключении
+                    errorMessage.textContent = `${config.name} недоступен. Пробуем ${API_CONFIG[currentAPI].name}...`;
+                    errorMessage.style.display = 'block';
+                    
+                    // Повторяем запрос с новым API
+                    setTimeout(fetchTime, 1000);
+                    return;
+                }
+                
+                // Если все API не сработали, используем локальное время с поправкой на Пхукет
+                errorMessage.textContent = `Все API недоступны. Показываем приблизительное время (разница с UTC: +7 часов).`;
+                errorMessage.style.display = 'block';
+                
+                // Используем локальное время с поправкой на UTC+7
+                const now = new Date();
+                const localTimeUTC = now.getTime() + (now.getTimezoneOffset() * 60000);
+                const phuketTime = new Date(localTimeUTC + (7 * 3600000)); // UTC+7
+                
+                const fallbackTime = phuketTime.toLocaleTimeString('ru-RU', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                const fallbackDate = phuketTime.toLocaleDateString('ru-RU', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                
+                timeDisplay.innerHTML = `<span style="color:#7f8c8d;">${fallbackTime} (приблизительно)</span>`;
+                document.getElementById('timezone').textContent = 'Asia/Bangkok (приблизительно)';
+                document.getElementById('date').textContent = fallbackDate;
+                document.getElementById('day').textContent = dayNames[phuketTime.getDay()];
+                document.getElementById('utc').textContent = now.toISOString().substr(11, 8) + ' UTC';
+            }
+        }
+        
+        // Функция для смены API
+        function changeAPI() {
+            const selectedAPI = document.querySelector('input[name="api"]:checked').value;
+            currentAPI = selectedAPI;
+            fetchTime();
+        }
+        
+        // Функция для включения/выключения автообновления
+        function toggleAutoUpdate() {
+            const checkbox = document.getElementById('autoUpdateCheckbox');
+            const button = document.getElementById('autoUpdateBtn');
+            
+            if (checkbox.checked && !isAutoUpdating) {
+                // Включаем автообновление
+                isAutoUpdating = true;
+                autoUpdateInterval = setInterval(fetchTime, 10000); // Обновляем каждые 10 секунд
+                button.textContent = 'Выключить автообновление';
+                console.log('Автообновление включено');
+            } else {
+                // Выключаем автообновление
+                isAutoUpdating = false;
+                if (autoUpdateInterval) {
+                    clearInterval(autoUpdateInterval);
+                    autoUpdateInterval = null;
+                }
+                checkbox.checked = false;
+                button.textContent = 'Включить автообновление';
+                console.log('Автообновление выключено');
+            }
+        }
+        
+        // Альтернативная функция для получения времени через TimeAPI.io
+        async function fetchTimeFromTimeAPI() {
+            try {
+                // TimeAPI.io обычно хорошо работает с CORS
+                const response = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=Asia/Bangkok', {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Ошибка TimeAPI');
+                
+                const data = await response.json();
+                return {
+                    datetime: new Date(data.dateTime),
+                    timezone: data.timeZone,
+                    success: true
+                };
+            } catch (error) {
+                console.log('TimeAPI.io недоступен:', error);
+                return { success: false };
+            }
+        }
+        
+        // Получаем время сразу при загрузке страницы
+        document.addEventListener('DOMContentLoaded', fetchTime);
+    </script>
+</body>
+</html>
