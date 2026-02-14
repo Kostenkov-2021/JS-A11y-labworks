@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Корреляция Пирсона</title>
+</head>
+<body>
+    <h4></h4>
+    <script>
+        (function() {
+            // 1. Извлекаем строку запроса
+            const queryString = location.search;
+
+            // 2. Парсим параметры с помощью URLSearchParams (разрешено)
+            const params = new URLSearchParams(queryString);
+            const aRaw = params.get('A');
+            const bRaw = params.get('B');
+
+            // Если одного из параметров нет – считаем корреляцию нулевой
+            if (!aRaw || !bRaw) {
+                document.title = '0.000';
+                setH4();
+                return;
+            }
+
+            // 3. Преобразуем строки вида "55,33,44" в массивы чисел
+            const aArray = aRaw.split(',').map(Number);
+            const bArray = bRaw.split(',').map(Number);
+
+            // Проверяем, что массивы не пусты и имеют одинаковую длину
+            if (aArray.length === 0 || aArray.length !== bArray.length) {
+                document.title = '0.000';
+                setH4();
+                return;
+            }
+
+            const n = aArray.length;
+
+            // 4. Вычисляем суммы для формулы Пирсона
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+            for (let i = 0; i < n; i++) {
+                const x = aArray[i];
+                const y = bArray[i];
+                sumX += x;
+                sumY += y;
+                sumXY += x * y;
+                sumX2 += x * x;
+                sumY2 += y * y;
+            }
+
+            // 5. Вычисляем числитель и знаменатель
+            const numerator = n * sumXY - sumX * sumY;
+            const denomX = n * sumX2 - sumX * sumX;
+            const denomY = n * sumY2 - sumY * sumY;
+            const denom = Math.sqrt(denomX * denomY);
+
+            // 6. Получаем коэффициент корреляции (берём модуль)
+            let r = (denom === 0) ? 0 : numerator / denom;
+            if (isNaN(r)) r = 0;      // защита от 0/0
+            r = Math.abs(r);
+
+            // 7. Отсекаем до трёх знаков после запятой (без округления)
+            const truncated = Math.floor(r * 1000) / 1000;
+
+            // 8. Формируем результат: если получилась единица – выводим "1", иначе "0.xxx"
+            let result;
+            if (truncated === 1) {
+                result = '1';
+            } else {
+                const intPart = Math.floor(truncated);          // всегда 0, если модуль < 1
+                const fracPart = Math.floor((truncated - intPart) * 1000);
+                result = intPart + '.' + fracPart.toString().padStart(3, '0');
+            }
+
+            // 9. Помещаем результат в заголовок окна
+            document.title = result;
+
+            // 10. Устанавливаем логин в элемент h4
+            function setH4() {
+                const h4 = document.querySelector('h4');
+                if (h4) {
+                    h4.textContent = 'kostenkovd_2025';
+                }
+            }
+            setH4();
+        })();
+    </script>
+</body>
+</html>

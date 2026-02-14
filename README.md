@@ -6,4 +6,6 @@ This repository contains the tasks for JS Itmo course
 [Labwork 5](Labwork_54789843789845821044392.html)
 [Labwork 6](Labwork_6.html)
 [Phuket time](Phuket_time_display.html)
+[Корреляция](14.02.26_Correlation_inclution_to_the_Pearson's_method.html)
+
 
