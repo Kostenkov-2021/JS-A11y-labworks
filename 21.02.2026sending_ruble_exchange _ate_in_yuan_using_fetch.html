@@ -45,30 +45,31 @@
         }
 
         // Функция отправки данных в Google Форму
-        async function submitToGoogleForm(surname, yuanAmount) {
-            // ВНИМАНИЕ: замените следующие идентификаторы на реальные из вашей формы!
-            const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSc_sJpZ-t2y-Mt_HsDADgh4-et7OGLGFqZNXseLRQlGwciWoQ/formResponse';
-            const FIELD_SURNAME = 'entry.2073720700';   // ID поля "Фамилия"
-            const FIELD_YUAN = 'entry.368455063';      // ID поля "Сумма в юанях"
+async function submitToGoogleForm(surname, yuanAmount) {
+    const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSc_sJpZ-t2y-Mt_HsDADgh4-et7OGLGFqZNXseLRQlGwciWoQ/formResponse';
+    const FIELD_SURNAME = 'entry.2073720700';
+    const FIELD_YUAN = 'entry.368455063';
 
-            // Создаём данные для отправки (формат application/x-www-form-urlencoded)
-            const params = new URLSearchParams();
-            params.append(FIELD_SURNAME, surname);
-            params.append(FIELD_YUAN, yuanAmount.toFixed(2)); // округляем до двух знаков
+    const params = new URLSearchParams();
+    params.append(FIELD_SURNAME, surname);
+    params.append(FIELD_YUAN, yuanAmount.toFixed(2));
 
-            // Отправляем POST-запрос
-            const response = await fetch(FORM_URL, {
-                method: 'POST',
-                mode: 'no-cors',  // режим no-cors, чтобы обойти CORS (ответ не читается)
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: params,
-            });
-
-            // Из-за no-cors мы не можем проверить статус, но данные должны отправиться
-            log('Данные отправлены в форму (ответ не доступен из-за CORS, проверьте таблицу)');
-        }
+    try {
+        const response = await fetch(FORM_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Пробуем с no-cors, но если не работает, можно убрать
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: params,
+        });
+        // При no-cors response.status = 0, и мы не можем проверить успех
+        log('Данные отправлены (ответ скрыт из-за CORS)');
+    } catch (error) {
+        log(`Ошибка при отправке: ${error.message}`);
+        throw error;
+    }
+}
 
         // Основная функция обработки нажатия кнопки
         async function handleSubmit() {
