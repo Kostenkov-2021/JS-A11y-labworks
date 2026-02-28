@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Конвертер рубли → юани и отправка в Google Форму</title>
+</head>
+<body>
+    <main>
+        <h1>Конвертер рублей в юани по курсу ЦБ и отправка данных</h1>
+        <form id="converterForm">
+            <label for="surname">Фамилия:</label>
+            <input type="text" id="surname" name="surname" required>
+            <br><br>
+            <label for="rubles">Сумма в рублях:</label>
+            <input type="number" id="rubles" name="rubles" step="0.01" required>
+            <br><br>
+            <button type="button" id="submitBtn">Отправить</button>
+        </form>
+        <pre id="log"></pre>
+    </main>
+
+    <script>
+        // Элементы для логирования
+        const logEl = document.getElementById('log');
+        const surnameInput = document.getElementById('surname');
+        const rublesInput = document.getElementById('rubles');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Вспомогательная функция для добавления текста в лог
+        function log(message) {
+            logEl.textContent += message + '\n';
+        }
+
+        // Функция получения курса юаня (CNY) с сайта ЦБ РФ через неофициальный API
+        async function getCnyRate() {
+            const response = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
+            if (!response.ok) {
+                throw new Error('Ошибка получения курса валют');
+            }
+            const data = await response.json();
+            // Курс юаня (сколько рублей за 1 юань)
+            const rate = data.Valute.CNY.Value;
+            log(`Текущий курс юаня: ${rate} руб. за 1 CNY`);
+            return rate;
+        }
+
+        // Функция отправки данных в Google Форму
+        async function submitToGoogleForm(surname, yuanAmount) {
+            // ВНИМАНИЕ: замените следующие идентификаторы на реальные из вашей формы!
+            const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSc_sJpZ-t2y-Mt_HsDADgh4-et7OGLGFqZNXseLRQlGwciWoQ/formResponse';
+            const FIELD_SURNAME = 'entry.2073720700';   // ID поля "Фамилия"
+            const FIELD_YUAN = 'entry.368455063';      // ID поля "Сумма в юанях"
+
+            // Создаём данные для отправки (формат application/x-www-form-urlencoded)
+            const params = new URLSearchParams();
+            params.append(FIELD_SURNAME, surname);
+            params.append(FIELD_YUAN, yuanAmount.toFixed(2)); // округляем до двух знаков
+
+            // Отправляем POST-запрос
+            const response = await fetch(FORM_URL, {
+                method: 'POST',
+                mode: 'no-cors',  // режим no-cors, чтобы обойти CORS (ответ не читается)
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: params,
+            });
+
+            // Из-за no-cors мы не можем проверить статус, но данные должны отправиться
+            log('Данные отправлены в форму (ответ не доступен из-за CORS, проверьте таблицу)');
+        }
+
+        // Основная функция обработки нажатия кнопки
+        async function handleSubmit() {
+            try {
+                // Получаем значения полей
+                const surname = surnameInput.value.trim();
+                const rubles = parseFloat(rublesInput.value);
+
+                if (!surname) {
+                    throw new Error('Введите фамилию');
+                }
+                if (isNaN(rubles) || rubles <= 0) {
+                    throw new Error('Введите корректную положительную сумму в рублях');
+                }
+
+                log('Начинаем обработку...');
+
+                // 1. Получаем курс
+                const rate = await getCnyRate();
+
+                // 2. Конвертируем рубли в юани
+                const yuan = rubles / rate;
+                log(`Сумма в юанях: ${yuan.toFixed(2)} CNY`);
+
+                // 3. Отправляем данные в Google Форму
+                await submitToGoogleForm(surname, yuan);
+
+                log('Готово! Проверьте Google Таблицу.');
+            } catch (error) {
+                log(`Ошибка: ${error.message}`);
+            }
+        }
+
+        // Привязываем обработчик к кнопке
+        submitBtn.addEventListener('click', handleSubmit);
+    </script>
+
+
+</body>
+</html>
