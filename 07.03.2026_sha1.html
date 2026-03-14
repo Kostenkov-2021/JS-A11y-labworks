@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>SHA‑1 хэш (нативная реализация)</title>
+</head>
+<body>
+    <h4>kostenkovd_2025</h4>
+    <input type="text" id="inp" placeholder="Введите текст">
+    <button id="bt">Вычислить SHA‑1</button>
+
+    <script>
+        (function() {
+            // ---------- Вспомогательная функция: строка → массив байт в UTF‑8 (без TextEncoder) ----------
+            function toUTF8Bytes(str) {
+                // encodeURIComponent кодирует символы, отличные от ASCII, в %xx, остальные оставляет как есть
+                let encoded = encodeURIComponent(str);
+                let bytes = [];
+                for (let i = 0; i < encoded.length; i++) {
+                    let ch = encoded[i];
+                    if (ch === '%') {
+                        // извлекаем два шестнадцатеричных символа
+                        let hex = encoded.substr(i + 1, 2);
+                        bytes.push(parseInt(hex, 16));
+                        i += 2; // пропускаем уже обработанные символы
+                    } else {
+                        // ASCII символ — просто берём его код
+                        bytes.push(ch.charCodeAt(0));
+                    }
+                }
+                return bytes;
+            }
+
+            // ---------- Функция SHA‑1 (полностью ручная реализация, без Crypto API) ----------
+            function sha1(str) {
+                // 1. Преобразование входной строки в байты UTF‑8
+                let bytes = toUTF8Bytes(str);
+                let originalLengthBits = bytes.length * 8;   // длина в битах исходного сообщения
+
+                // 2. Дополнение сообщения по спецификации SHA‑1
+                // Добавляем бит '1' (байт 0x80)
+                bytes.push(0x80);
+
+                // Добавляем нулевые байты, пока длина (в байтах) не станет такой, что (len + 8) % 64 == 0
+                while ((bytes.length + 8) % 64 !== 0) {
+                    bytes.push(0);
+                }
+
+                // Добавляем 64‑битную длину исходного сообщения в битах (big‑endian)
+                // Разбиваем на два 32‑битных слова: старшее и младшее
+                let high = Math.floor(originalLengthBits / 0x100000000) >>> 0;
+                let low = originalLengthBits >>> 0;
+
+                // Старшее слово (4 байта, старший байт первый)
+                for (let i = 3; i >= 0; i--) {
+                    bytes.push((high >>> (i * 8)) & 0xFF);
+                }
+                // Младшее слово (4 байта, старший байт первый)
+                for (let i = 3; i >= 0; i--) {
+                    bytes.push((low >>> (i * 8)) & 0xFF);
+                }
+
+                // 3. Инициализация хэш‑констант (первые 32 бита дробных частей квадратных корней простых чисел)
+                let h0 = 0x67452301;
+                let h1 = 0xEFCDAB89;
+                let h2 = 0x98BADCFE;
+                let h3 = 0x10325476;
+                let h4 = 0xC3D2E1F0;
+
+                // Вспомогательная функция циклического сдвига влево (для 32‑битных чисел)
+                function leftRotate(x, n) {
+                    return ((x << n) | (x >>> (32 - n))) >>> 0;
+                }
+
+                // 4. Обработка сообщения блоками по 64 байта (512 бит)
+                for (let i = 0; i < bytes.length; i += 64) {
+                    let block = bytes.slice(i, i + 64);
+
+                    // Формируем массив W[0…79] (каждое слово 32 бита)
+                    let w = new Array(80);
+                    // Первые 16 слов — непосредственно из блока (big‑endian)
+                    for (let t = 0; t < 16; t++) {
+                        w[t] = (block[t * 4] << 24) |
+                               (block[t * 4 + 1] << 16) |
+                               (block[t * 4 + 2] << 8) |
+                               block[t * 4 + 3];
+                    }
+                    // Остальные 64 слова вычисляются по формуле
+                    for (let t = 16; t < 80; t++) {
+                        w[t] = leftRotate(w[t - 3] ^ w[t - 8] ^ w[t - 14] ^ w[t - 16], 1);
+                    }
+
+                    // Инициализируем рабочие переменные текущими значениями хэша
+                    let a = h0;
+                    let b = h1;
+                    let c = h2;
+                    let d = h3;
+                    let e = h4;
+
+                    // Основной цикл из 80 шагов
+                    for (let t = 0; t < 80; t++) {
+                        let f, k;
+                        if (t < 20) {
+                            f = (b & c) | ((~b) & d);
+                            k = 0x5A827999;
+                        } else if (t < 40) {
+                            f = b ^ c ^ d;
+                            k = 0x6ED9EBA1;
+                        } else if (t < 60) {
+                            f = (b & c) | (b & d) | (c & d);
+                            k = 0x8F1BBCDC;
+                        } else {
+                            f = b ^ c ^ d;
+                            k = 0xCA62C1D6;
+                        }
+
+                        let temp = (leftRotate(a, 5) + f + e + k + w[t]) >>> 0;
+                        e = d;
+                        d = c;
+                        c = leftRotate(b, 30) >>> 0;
+                        b = a;
+                        a = temp;
+                    }
+
+                    // Добавляем результат текущего блока к общему хэшу
+                    h0 = (h0 + a) >>> 0;
+                    h1 = (h1 + b) >>> 0;
+                    h2 = (h2 + c) >>> 0;
+                    h3 = (h3 + d) >>> 0;
+                    h4 = (h4 + e) >>> 0;
+                }
+
+                // 5. Формирование итоговой шестнадцатеричной строки (40 символов)
+                function toHex(n) {
+                    let s = n.toString(16);
+                    while (s.length < 8) s = '0' + s;
+                    return s;
+                }
+
+                return toHex(h0) + toHex(h1) + toHex(h2) + toHex(h3) + toHex(h4);
+            }
+
+            // ---------- Привязка обработчика к кнопке ----------
+            const inp = document.getElementById('inp');
+            const bt = document.getElementById('bt');
+
+            bt.addEventListener('click', function() {
+                // Считываем значение из поля
+                let value = inp.value;
+                // Вычисляем SHA‑1
+                let hash = sha1(value);
+                // Записываем результат обратно в поле
+                inp.value = hash;
+            });
+        })();
+    </script>
+</body>
+</html>

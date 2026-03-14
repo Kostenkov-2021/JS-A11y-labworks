@@ -8,6 +8,7 @@ This repository contains the tasks for JS Itmo course
 [Phuket time](Phuket_time_display.html)
 [Корреляция](14.02.26_Correlation_inclution_to_the_Pearson's_method.html)
 [Отправка суммы юаней](21.02.2026_rubleexchange_rate_and_yuan_exchange_rate.html)
+[Получение хэша sha1 текста](07.03.2026_sha1.html)
 
 
 
