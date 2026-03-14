@@ -9,6 +9,7 @@ This repository contains the tasks for JS Itmo course
 [Корреляция](14.02.26_Correlation_inclution_to_the_Pearson's_method.html)
 [Отправка суммы юаней](21.02.2026_rubleexchange_rate_and_yuan_exchange_rate.html)
 [Получение хэша sha1 текста](07.03.2026_sha1.html)
+[Сигмоида параметров URL](07.03.2026_sigmoid_of_URL_parameters.html)
 
 
 
