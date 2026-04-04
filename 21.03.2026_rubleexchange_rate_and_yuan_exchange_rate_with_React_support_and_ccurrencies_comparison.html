@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Конвертер с реактивным интерфейсом (Vue 3)</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fb;
+            margin: 0;
+            padding: 2rem;
+        }
+        main {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 1.6rem;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            color: #1e293b;
+            font-weight: 600;
+        }
+        .card {
+            background: #f8fafc;
+            border-radius: 20px;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 1.8rem;
+            border: 1px solid #e2e8f0;
+        }
+        .card h2 {
+            font-size: 1.2rem;
+            margin: 0 0 0.75rem 0;
+            color: #0f172a;
+        }
+        label {
+            font-weight: 500;
+            color: #334155;
+            display: inline-block;
+            min-width: 140px;
+        }
+        input, select {
+            padding: 8px 12px;
+            border-radius: 16px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 0.95rem;
+            transition: 0.2s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+        }
+        button {
+            background: #3b82f6;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .flex-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .result-box {
+            background: #eef2ff;
+            border-radius: 20px;
+            padding: 0.8rem 1.2rem;
+            margin: 12px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .result-label {
+            font-weight: 600;
+            color: #1e40af;
+        }
+        .result-value {
+            font-size: 1.35rem;
+            font-weight: 700;
+            font-family: monospace;
+            color: #0c4a6e;
+            letter-spacing: 0.5px;
+        }
+        pre {
+            background: #1e293b;
+            color: #cbd5e1;
+            padding: 12px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            overflow-x: auto;
+            margin-top: 1.5rem;
+        }
+        hr {
+            margin: 1.5rem 0;
+            border: none;
+            border-top: 2px dashed #e2e8f0;
+        }
+        .badge {
+            font-size: 0.75rem;
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 30px;
+            color: #334155;
+        }
+    </style>
+    <!-- Импорт карты для Vue 3 (runtime + компилятор, полная сборка) -->
+    <script type="importmap">
+        {
+            "imports": {
+                "vue": "https://kodaktor.ru/vue.esm-browser.js"
+            }
+        }
+    </script>
+</head>
+<body>
+<main>
+    <h1>Конвертер рублей и юани и сравнение валют</h1>
+
+    <div class="card">
+        <h2>Отправка данных в Google Форму</h2>
+        <form id="converterForm">
+            <div class="flex-row">
+                <label for="surname">Фамилия:</label>
+                <input type="text" id="surname" name="surname" required placeholder="Иванов">
+            </div>
+            <div class="flex-row">
+                <label for="rubles">Сумма в рублях:</label>
+                <input type="number" id="rubles" name="rubles" step="0.01" required placeholder="0.00">
+            </div>
+            <button type="button" id="submitBtn">Отправить</button>
+        </form>
+    </div>
+
+    <!-- РЕАКТИВНЫЙ БЛОК (Vue 3) -->
+    <div class="card" style="background: linear-gradient(145deg, #ffffff, #f1f5f9);">
+        <h2>Реактивное сравнение валют</h2>
+        <div class="flex-row">
+            <label>Выберите валюту для сравнения:</label>
+            <select id="currencySelect" style="min-width: 150px;">
+                <option value="">Загрузка курсов...</option>
+            </select>
+        </div>
+
+        <div class="result-box">
+            <span class="result-label">Сумма в юанях (CNY):</span>
+            <span class="result-value" id="yuanDisplay">—</span>
+        </div>
+        <div class="result-box">
+            <span class="result-label" id="compareLabel">Сумма в выбранной валюте:</span>
+            <span class="result-value" id="currencyDisplay">—</span>
+        </div>
+        <div class="badge" style="margin-top: 8px; display: inline-block;">
+            Реактивность Vue: изменение суммы или выбранной валюты мгновенно обновляет оба поля
+        </div>
+    </div>
+
+    <pre id="log">Журнал событий:</pre>
+</main>
+
+<script type="module">
+    // Импорт реактивного ядра Vue
+    import { reactive, watchEffect, computed } from 'vue';
+
+    // DOM элементы
+    const logEl = document.getElementById('log');
+    const surnameInput = document.getElementById('surname');
+    const rublesInput = document.getElementById('rubles');
+    const submitBtn = document.getElementById('submitBtn');
+    const currencySelect = document.getElementById('currencySelect');
+    const yuanDisplaySpan = document.getElementById('yuanDisplay');
+    const currencyDisplaySpan = document.getElementById('currencyDisplay');
+    const compareLabelSpan = document.getElementById('compareLabel');
+
+    function log(message) {
+        logEl.textContent += message + '\n';
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Реактивное состояние (Vue)
+    const state = reactive({
+        rubles: 0,                     // сумма в рублях (синхронизируется с input)
+        selectedCurrency: 'USD',       // код выбранной валюты для сравнения (по умолчанию USD)
+        rates: null,                  // объект курсов от ЦБ (все валюты)
+        loading: true,                // флаг загрузки
+        error: null
+    });
+
+    // Получение курсов валют
+    async function loadExchangeRates() {
+        try {
+            log('Загрузка актуальных курсов валют с ЦБ РФ...');
+            const response = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            // Сохраняем Valute (все валюты)
+            state.rates = data.Valute;
+            state.loading = false;
+            log(`Курсы загружены. Доступно валют: ${Object.keys(state.rates).length}`);
+            
+            // Заполняем select списком валют
+            populateCurrencySelect(state.rates);
+            
+            // Устанавливаем начальное значение selectedCurrency, если USD существует, иначе первую валюту
+            if (state.rates['USD']) {
+                state.selectedCurrency = 'USD';
+            } else {
+                const firstKey = Object.keys(state.rates)[0];
+                if (firstKey) state.selectedCurrency = firstKey;
+            }
+            // Обновляем отображение названия валюты в лейбле
+            updateCompareLabel();
+            
+            // После загрузки курсов пересчитываем отображение
+        } catch (err) {
+            state.error = err.message;
+            state.loading = false;
+            log(`Ошибка загрузки курсов: ${err.message}`);
+            currencySelect.innerHTML = '<option>Ошибка загрузки</option>';
+        }
+    }
+
+    // Заполнение выпадающего списка валютами
+    function populateCurrencySelect(rates) {
+        if (!rates) return;
+        // формируем option элементы: код валюты + название (Nominal + Name)
+        const options = [];
+        for (const [code, info] of Object.entries(rates)) {
+            const displayName = `${code} (${info.Name})`;
+            options.push(`<option value="${code}">${displayName}</option>`);
+        }
+        // сортируем по коду валюты
+        options.sort((a, b) => {
+            const valA = a.match(/value="([A-Z]+)"/)[1];
+            const valB = b.match(/value="([A-Z]+)"/)[1];
+            return valA.localeCompare(valB);
+        });
+        currencySelect.innerHTML = options.join('');
+        // если ранее выбранная валюта существует в списке, выставляем selected
+        if (state.selectedCurrency && rates[state.selectedCurrency]) {
+            currencySelect.value = state.selectedCurrency;
+        } else if (rates['USD']) {
+            currencySelect.value = 'USD';
+            state.selectedCurrency = 'USD';
+        } else {
+            const firstCode = Object.keys(rates)[0];
+            if (firstCode) currencySelect.value = firstCode;
+        }
+    }
+
+    // Обновление текста лейбла для сравнения
+    function updateCompareLabel() {
+        if (state.rates && state.selectedCurrency && state.rates[state.selectedCurrency]) {
+            const currencyInfo = state.rates[state.selectedCurrency];
+            const code = state.selectedCurrency;
+            compareLabelSpan.innerHTML = `Сумма в ${code} (${currencyInfo.Name}):`;
+        } else {
+            compareLabelSpan.innerHTML = `Сумма в выбранной валюте:`;
+        }
+    }
+
+    // Синхронизация input[type=number] с реактивным state.rubles
+    function syncRublesFromInput() {
+        const rawValue = rublesInput.value.trim();
+        if (rawValue === '') {
+            state.rubles = 0;
+        } else {
+            const num = parseFloat(rawValue);
+            state.rubles = isNaN(num) ? 0 : num;
+        }
+    }
+    
+    // слушаем событие input от поля "Сумма в рублях"
+    rublesInput.addEventListener('input', (e) => {
+        let val = parseFloat(e.target.value);
+        if (isNaN(val)) val = 0;
+        state.rubles = val;
+        // log(`Сумма рублей изменена: ${val} ₽`);
+    });
+    
+    
+    // Синхронизация выбранной валюты из select
+    currencySelect.addEventListener('change', (e) => {
+        const newCurrency = e.target.value;
+        if (state.rates && state.rates[newCurrency]) {
+            state.selectedCurrency = newCurrency;
+            updateCompareLabel();
+            log(`Выбрана валюта для сравнения: ${newCurrency} (${state.rates[newCurrency].Name})`);
+        }
+    });
+    
+    // Реактивные вычисления
+    //    Автоматически обновляет DOM при изменении rubles, выбранной валюты или курсов
+    watchEffect(() => {
+        // если курсы ещё не загружены или произошла ошибка
+        if (state.loading || !state.rates) {
+            yuanDisplaySpan.textContent = 'загрузка...';
+            currencyDisplaySpan.textContent = 'загрузка...';
+            return;
+        }
+        if (state.error) {
+            yuanDisplaySpan.textContent = 'ошибка курсов';
+            currencyDisplaySpan.textContent = 'ошибка курсов';
+            return;
+        }
+        
+        // Получаем курс юаня из загруженных данных
+        const cnyRateObj = state.rates['CNY'];
+        if (!cnyRateObj) {
+            yuanDisplaySpan.textContent = 'курс CNY не найден';
+            currencyDisplaySpan.textContent = 'данные недоступны';
+            return;
+        }
+        
+        const cnyRate = cnyRateObj.Value;
+        const rub = state.rubles;
+        
+        // Сумма в юанях
+        let yuanAmount = 0;
+        if (cnyRate > 0 && rub > 0) {
+            yuanAmount = rub / cnyRate;
+        } else if (rub === 0) {
+            yuanAmount = 0;
+        } else {
+            yuanAmount = 0;
+        }
+        yuanDisplaySpan.textContent = `${yuanAmount.toFixed(4)} CNY`;
+        
+        // ===== Сумма в выбранной валюте для сравнения
+        const selected = state.selectedCurrency;
+        const selectedRateObj = state.rates[selected];
+        if (!selectedRateObj) {
+            currencyDisplaySpan.textContent = 'валюта недоступна';
+            return;
+        }
+        const selectedRate = selectedRateObj.Value;   // рублей за единицу выбранной валюты
+        let convertedAmount = 0;
+        if (selectedRate > 0 && rub > 0) {
+            convertedAmount = rub / selectedRate;
+        } else if (rub === 0) {
+            convertedAmount = 0;
+        }
+        // форматируем с учётом валюты
+        currencyDisplaySpan.textContent = `${convertedAmount.toFixed(4)} ${selected}`;
+        
+        if (rub > 0 && !state.loading) {
+            console.log(`[Vue reactivity] ₽${rub} → ${yuanAmount.toFixed(4)} CNY | ${selected}: ${convertedAmount.toFixed(4)}`);
+        }
+    });
+    
+    watchEffect(() => {
+        if (!state.loading && state.rates && state.selectedCurrency) {
+            updateCompareLabel();
+        }
+    });
+    
+    // загружаем курсы и устанавливаем начальные значения
+    loadExchangeRates().then(() => {
+        // После загрузки курсов синхронизируем начальное значение рублей
+        syncRublesFromInput();
+        // Если поле ввода рублей не пустое — триггерим реактивность
+        if (rublesInput.value !== '') {
+            state.rubles = parseFloat(rublesInput.value) || 0;
+        } else {
+            state.rubles = 0;
+        }
+        log('Меняйте сумму рублей или выберите валюту — суммы обновятся мгновенно.');
+    }).catch(err => {
+        log(`Критическая ошибка: ${err.message}`);
+    });
+    
+    // Обработчик отправки в Google Форму
+    async function submitToGoogleForm(surname, yuanAmount) {
+        const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSc_sJpZ-t2y-Mt_HsDADgh4-et7OGLGFqZNXseLRQlGwciWoQ/formResponse';
+        const FIELD_SURNAME = 'entry.2073720700';
+        const FIELD_YUAN = 'entry.368455063';
+        
+        const params = new URLSearchParams();
+        params.append(FIELD_SURNAME, surname);
+        params.append(FIELD_YUAN, yuanAmount.toFixed(2));
+        
+        try {
+            const response = await fetch(FORM_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params,
+            });
+            log('📤 Данные отправлены в Google Форму (режим no-cors)');
+        } catch (error) {
+            log(`Ошибка при отправке: ${error.message}`);
+            throw error;
+        }
+    }
+    
+    // функция обработки нажатия кнопки с использованием реактивных данных
+    async function handleSubmit() {
+        try {
+            const surname = surnameInput.value.trim();
+            // Берём актуальную сумму из реактивного состояния (state.rubles)
+            const rubles = state.rubles;
+            
+            if (!surname) {
+                throw new Error('Введите фамилию');
+            }
+            if (isNaN(rubles) || rubles <= 0) {
+                throw new Error('Введите корректную положительную сумму в рублях');
+            }
+            
+            // Проверяем, что курсы загружены
+            if (!state.rates || !state.rates['CNY']) {
+                throw new Error('Курсы валют ещё не загружены, попробуйте через 1 секунду');
+            }
+            
+            const cnyRate = state.rates['CNY'].Value;
+            const yuanAmount = rubles / cnyRate;
+            
+            log(`Отправка: ${surname}, сумма ${rubles} ₽ → ${yuanAmount.toFixed(2)} CNY (курс: ${cnyRate} ₽/CNY)`);
+            
+            await submitToGoogleForm(surname, yuanAmount);
+            log('Готово! Данные записаны в Google Таблицу (проверьте ответы формы).');
+        } catch (error) {
+            log(`Ошибка: ${error.message}`);
+        }
+    }
+    
+    // Переопределяем обработчик кнопки (сохраняя совместимость)
+    const oldSubmitBtn = submitBtn.cloneNode(true);
+    submitBtn.parentNode.replaceChild(oldSubmitBtn, submitBtn);
+    const newSubmitBtn = document.getElementById('submitBtn');
+    newSubmitBtn.addEventListener('click', handleSubmit);
+    
+    // синхронизируем начальное значение при загрузке страницы
+    window.addEventListener('DOMContentLoaded', () => {
+        syncRublesFromInput();
+    });
+    
+    log('Приложение запущено. Реактивный движок Vue 3 активен.');
+    log('Совет: измените сумму рублей или выберите другую валюту в списке — значения пересчитаются автоматически.');
+    
+    // Экспорт в глобальный объект для отладки
+    window.__VUE_REACTIVE_STATE = state;
+</script>
+</body>
+</html>
