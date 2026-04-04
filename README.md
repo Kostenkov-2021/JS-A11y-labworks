@@ -10,6 +10,8 @@ This repository contains the tasks for JS Itmo course
 [Отправка суммы юаней](21.02.2026_rubleexchange_rate_and_yuan_exchange_rate.html)
 [Получение хэша sha1 текста](07.03.2026_sha1.html)
 [Сигмоида параметров URL](07.03.2026_sigmoid_of_URL_parameters.html)
+[Реализация Инь-янь на SVG](07.03.2026_SVG_yin_yang_symbol.html)
+[Отправка суммы юаней и отображение других валют](21.03.2026_rubleexchange_rate_and_yuan_exchange_rate_with_React_support_and_ccurrencies_comparison.html)
 
 
 
